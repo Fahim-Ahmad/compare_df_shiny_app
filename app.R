@@ -38,15 +38,15 @@ compare_df <- function(df1, df2, unique_id_df1, unique_id_df2) {
 }
 
 ##### test
-# dt1 <- dt2 <- mtcars
-# dt1$id <- dt2$id <- rownames(mtcars)
-# dt2$am[dt2$am == 1] <- 2
-# dt2$wt[dt2$wt > 100] <- 105
-# dt2$cyl[dt2$cyl == 8] <- 7
-# dt2 <- dt2[1:30, ]
-# compare_df(df1 = dt1, df2 = dt2, unique_id_df1 = "id", unique_id_df2 = "id")
-# write.csv(dt1, "df1.csv", row.names = F)
-# write.csv(dt2, "df2.csv", row.names = F)
+dt1 <- dt2 <- mtcars
+dt1$id <- dt2$id <- rownames(mtcars)
+dt2$am[dt2$am == 1] <- 2
+dt2$wt[dt2$wt > 100] <- 105
+dt2$cyl[dt2$cyl == 8] <- 7
+dt2 <- dt2[1:30, ]
+compare_df(df1 = dt1, df2 = dt2, unique_id_df1 = "id", unique_id_df2 = "id")
+# write.csv(dt1, "test_data/df1.csv", row.names = F)
+# write.csv(dt2, "test_data/df2.csv", row.names = F)
 #####
 
 # ui part of the dashboard
@@ -54,16 +54,28 @@ ui <- dashboardPage(
   dashboardHeader(title = "compare_df( )"),
   dashboardSidebar(
     fileInput(inputId = "df1", label = "", accept = ".csv", placeholder = "Choose CSV File", buttonLabel = "Upload df1"),
-    fileInput(inputId = "df2", label = "", accept = ".csv", placeholder = "Choose CSV File", buttonLabel = "Upload df2"),
+    fileInput(inputId = "df2", label = NULL, accept = ".csv", placeholder = "Choose CSV File", buttonLabel = "Upload df2"),
     br(),
     uiOutput("unique_id_df1"),
     uiOutput("unique_id_df2")
   ),
   dashboardBody(
-    splitLayout(cellWidths = c("33.3%", "33.3%", "33.3%"),
+    splitLayout(cellWidths = c("30%", "30%", "40%"),
                 tableOutput("glimpse_df1"),
                 tableOutput("glimpse_df2"),
-                NULL
+                list(
+                  HTML("<b>Developed by:</b><a href='https://fahimahmad.netlify.app'> Fahim Ahmad</a><br>
+                       <b>Purpose:</b> The purpose of developing this app is to compare two datasets.<br>
+                       Please save your datasets in .csv files and use the upload buttons to read them.<br>
+                       Please make sure to select the correct unique identifier in both datasets."),
+                  br(),
+                  downloadLink(outputId = "download_test_data", label = "Click here to download example data.",
+                                 style = "color: steelblue"
+                  ),
+                  br(),br(),
+                  HTML("<b>Source code:</b> You can have the script from my <a href='https://github.com/Fahim-Ahmad/compare_df_shiny_app'>GitHub</a> account.<br>
+                       Please feel free to contribute or report typos, codebreak, or raise any concerns in the issues section.")
+                )
                 ),
     htmlOutput("select_identifier_msg"),
     htmlOutput("different_identifier_msg"),
@@ -74,7 +86,8 @@ ui <- dashboardPage(
     br(),
     htmlOutput("select_identifier_note"),
     br(),
-    DT::dataTableOutput("diff")
+    DT::dataTableOutput("diff_table"),
+    htmlOutput("diff_text")
   )
 )
 
@@ -172,47 +185,77 @@ server <- function(input, output) {
                  style="color: #fff; background-color: #337ab7; border-color: gray")
   })
   
-  observeEvent(input$compare_diff, {
-    if(input$id_df1 != "" & input$id_df2 != "") {
-      output$diff <- DT::renderDataTable({
-        DT::datatable(
-          compare_df(df1 = df1(), df2 = df2(), unique_id_df1 = input$id_df1, unique_id_df2 = input$id_df2) %>% 
-            mutate(across(everything(), function(x)
-              x = ifelse(is.na(x), "NA", x)
-              )),
-          extensions = c('Buttons','RowGroup'),
-          callback=DT::JS('$("button.buttons-copy").css("background","skyblue");
-                    $("button.buttons-csv").css("background","skyblue");
-                    return table;'),
-          options = list(
-            dom = 'Bfrtip',
-            lengthMenu = list(c(10, -1), c('10', 'All')),
-            pageLength = 10,
-            buttons = list(
-              c('copy', 'csv'),
-              list(
-                extend = "collection",
-                text = 'Show All',
-                action = DT::JS("function ( e, dt, node, config ) {
-                                    dt.page.len(-1);
-                                    dt.ajax.reload();
-                                    
-                                }
-                                ")
-              )
-            ),
-            columnDefs = list(list(className = 'dt-center', targets = 3:4))
-          )
-        ) %>% 
-          DT::formatStyle('value_in_df2',  color = 'red')
-      })
+  diff <- reactive({
+    diff_df1_df2 <- compare_df(df1 = df1(), df2 = df2(), unique_id_df1 = input$id_df1, unique_id_df2 = input$id_df2)
+    
+    if ("data.frame" %in% class(diff_df1_df2)) {
+      diff_df1_df2 <- diff_df1_df2 %>%
+        mutate(across(everything(), function(x)
+          x = ifelse(is.na(x), "NA", x)
+        ))
+    } else {
+      diff_df1_df2
     }
   })
+  
+  observeEvent(input$compare_diff, {
+    if(input$id_df1 != "" & input$id_df2 != "") {
+      if ("data.frame" %in% class(diff())) {
+        output$diff_table <- DT::renderDataTable({
+          DT::datatable(diff(),
+                        extensions = c('Buttons','RowGroup'),
+                        callback=DT::JS('$("button.buttons-copy").css("background","skyblue");
+                    $("button.buttons-csv").css("background","skyblue");
+                    return table;'),
+                        options = list(
+                          dom = 'Bfrtip',
+                          lengthMenu = list(c(10, -1), c('10', 'All')),
+                          pageLength = 10,
+                          buttons = list(
+                            c('copy', 'csv'),
+                            list(
+                              extend = "collection",
+                              text = 'Show All',
+                              action = DT::JS("function ( e, dt, node, config ) {
+                                    dt.page.len(-1);
+                                    dt.ajax.reload();
+
+                                }
+                                ")
+                            )
+                          ),
+                          columnDefs = list(list(className = 'dt-center', targets = 3:4))
+                        )
+          ) %>%
+            DT::formatStyle('value_in_df2',  color = 'red')
+        })
+      }
+    }
+  })
+  
+  observeEvent(input$compare_diff, {
+    if(input$id_df1 != "" & input$id_df2 != "") {
+      if (class(diff()) == "character") {
+        output$diff_text <- renderText({
+          HTML("<b>No differences observed!<b>")
+        })
+      }
+    }
+  })
+  
+  output$download_test_data <- downloadHandler(
+    filename <- function() {
+      paste("test_data", "zip", sep=".")
+    },
+
+    content <- function(file) {
+      file.copy("test_data.zip", file)
+    },
+    contentType = "application/zip"
+  )
     
 }
 
 # create Shiny app objects
 shinyApp(ui, server)
-
-
 
