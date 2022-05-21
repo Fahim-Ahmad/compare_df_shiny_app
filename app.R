@@ -38,13 +38,13 @@ compare_df <- function(df1, df2, unique_id_df1, unique_id_df2) {
 }
 
 ##### test
-dt1 <- dt2 <- mtcars
-dt1$id <- dt2$id <- rownames(mtcars)
-dt2$am[dt2$am == 1] <- 2
-dt2$wt[dt2$wt > 100] <- 105
-dt2$cyl[dt2$cyl == 8] <- 7
-dt2 <- dt2[1:30, ]
-compare_df(df1 = dt1, df2 = dt2, unique_id_df1 = "id", unique_id_df2 = "id")
+# dt1 <- dt2 <- mtcars
+# dt1$id <- dt2$id <- rownames(mtcars)
+# dt2$am[dt2$am == 1] <- 2
+# dt2$wt[dt2$wt > 100] <- 105
+# dt2$cyl[dt2$cyl == 8] <- 7
+# dt2 <- dt2[1:30, ]
+# compare_df(df1 = dt1, df2 = dt2, unique_id_df1 = "id", unique_id_df2 = "id")
 # write.csv(dt1, "test_data/df1.csv", row.names = F)
 # write.csv(dt2, "test_data/df2.csv", row.names = F)
 #####
@@ -57,7 +57,9 @@ ui <- dashboardPage(
     fileInput(inputId = "df2", label = NULL, accept = ".csv", placeholder = "Choose CSV File", buttonLabel = "Upload df2"),
     br(),
     uiOutput("unique_id_df1"),
-    uiOutput("unique_id_df2")
+    uiOutput("unique_id_df2"),
+    br(),
+    actionButton("refresh", "Refresh", icon = icon("fas fa-sync"))
   ),
   dashboardBody(
     splitLayout(cellWidths = c("30%", "30%", "40%"),
@@ -92,7 +94,7 @@ ui <- dashboardPage(
 )
 
 # server part of the dashboard
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   df1 <- reactive({
     file <- input$df1
@@ -160,7 +162,7 @@ server <- function(input, output) {
     
     if (input$id_df1 != "") {
       n <- count(df1(), get(input$id_df1)) %>% filter(n>1) %>% nrow()
-      if (n != 0 ) { # n!=0
+      if (n != 0 ) {
         HTML(paste0('<font color="red">WARNING:</font> the ', input$id_df1, ' variable is not uniquely identified in df1'))
       }
     }
@@ -253,6 +255,10 @@ server <- function(input, output) {
     },
     contentType = "application/zip"
   )
+  
+  observeEvent(input$refresh, {
+    session$reload()
+  })
     
 }
 
