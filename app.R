@@ -39,7 +39,8 @@ compare_df <- function(df1, df2, unique_id_df1, unique_id_df2) {
   
   diff <- df_both %>% 
     filter((value_1 != value_2) | (is.na(value_1) & !is.na(value_2)) | (!is.na(value_1) & is.na(value_2))) %>%
-    rename(column_name = name, value_in_df1 = value_1, value_in_df2 = value_2)
+    rename(column_name = name, value_in_df1 = value_1, value_in_df2 = value_2) %>% 
+    mutate(column_name = ifelse(column_name == "key", "KEY", column_name))
   
   if(nrow(diff) == 0) {
     paste0("No difference in df1 and df2")
