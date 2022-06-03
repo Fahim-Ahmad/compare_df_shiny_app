@@ -9,7 +9,7 @@ library(shinydashboard)
 # source("https://raw.githubusercontent.com/Fahim-Ahmad/r_custom_functions/main/compare_df_function.R")
 compare_df <- function(df1, df2, unique_id_df1, unique_id_df2) {
   
-  if ("KEY" %in% colnames(df1)) {
+  if ("KEY" %in% colnames(df1) & unique_id_df1 != "KEY") {
     df1 <- df1 %>% 
       rename(key = KEY)
   }
@@ -22,7 +22,7 @@ compare_df <- function(df1, df2, unique_id_df1, unique_id_df2) {
     pivot_longer(-KEY, values_to = "value_1") %>% 
     mutate(value_1 = str_squish(value_1))
   
-  if ("KEY" %in% colnames(df2)) {
+  if ("KEY" %in% colnames(df2) & unique_id_df2 != "KEY") {
     df2 <- df2 %>% 
       rename(key = KEY)
   }
